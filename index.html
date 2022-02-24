@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Innerspace demoProject</title>
+    <link type="text/css" rel="stylesheet" href="main.css" />
+    <script src="js/Tween.js"></script>
+  </head>
+  <body>
+    <script type="x-shader/x-vertex" id="vertexshader">
+
+      attribute float size;
+      varying vec3 vColor;
+      varying float dist;
+
+      void main() {
+      	vColor = color;
+      	vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+      	gl_PointSize = size * ( 300.0 / -mvPosition.z );
+        dist = 50.0 / -mvPosition.z;
+      	gl_Position = projectionMatrix * mvPosition;
+      }
+    </script>
+    <script type="x-shader/x-fragment" id="fragmentshader">
+
+      uniform sampler2D pointTexture;
+      uniform vec3 rimColor;
+      varying vec3 vColor;
+      varying float dist;
+
+      void main() {
+        //vec3 lightColor = vec3(0.6588, 1.0, 0.9137);
+        if (distance(gl_PointCoord, vec2(0.5)) > .4) discard;
+        float c = (sin(gl_PointCoord.x * 3.141592) + sin(gl_PointCoord.y * 3.141592)) / 2.;
+        vec3 s = mix(rimColor, vColor, c);
+      	gl_FragColor = vec4(s, 1);
+      }
+    </script>
+    <script src="main.js" type="module"></script>
+  </body>
+</html>
