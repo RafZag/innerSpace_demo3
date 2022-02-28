@@ -17,18 +17,43 @@ let shaderMaterial;
 const meshURL = "gltf/human.glb";
 const gltfLoader = new GLTFLoader();
 const MAX_PARTICLES = 500000;
+let uniformsValues;
+let time;
 
 let viewportSurfaceArea = window.innerWidth * window.innerHeight * 0.0000001;
 
 const params = {
   particleColor: 0x4fcfae,
-  particleCount: 10000,
+  particleCount: 35000,
   surfaceColor: 0x999999,
-  particleSize: 3,
-  particleRes: 2,
-  particleDist: 0.035,
+  particleSize: 1.7,
+  particleSizeVariation: 0.1,
+  particlesWobble: 0.1,
   backgroundColor: 0xdfe9f2,
 };
+
+const tweenParams = {
+  transition: 0,
+  duration: 200,
+  startAnim: function () {
+    if (this.transition == 1) {
+      buildTween.to({ transition: 0 }, tweenParams.duration).start();
+    }
+    if (this.transition == 0) {
+      buildTween.to({ transition: 1 }, tweenParams.duration).start();
+    }
+  },
+};
+
+let buildTween = new TWEEN.Tween(tweenParams)
+  .to({ transition: 1 })
+  .easing(TWEEN.Easing.Quartic.Out)
+  .onComplete(() => {
+    if (tweenParams.transition == 1) console.log("complete!");
+  })
+  .onUpdate(() => {
+    buildAnimation();
+  });
 
 // ------------------ Sampler --------------------
 
@@ -40,10 +65,14 @@ init();
 animate();
 
 function init() {
-  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 3000);
-  camera.position.set(0, 24, 18);
-
   scene = new THREE.Scene();
+
+  //---------------- Camera --------------------------
+
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 3000);
+  camera.position.set(15, 25, 18);
+
+  //---------------- Lights --------------------------
 
   const light1 = new THREE.DirectionalLight(0xffffff, 0.5);
   light1.position.set(0, 100, 250);
@@ -54,9 +83,6 @@ function init() {
   scene.add(light2);
 
   scene.add(new THREE.AmbientLight(0x999999));
-
-  stats = new Stats();
-  document.body.appendChild(stats.dom);
 
   //---------------- Render --------------------------
 
@@ -70,7 +96,7 @@ function init() {
   //---------------- Controls --------------------------
 
   controls = new OrbitControls(camera, renderer.domElement);
-  controls.target = new THREE.Vector3(0, 15, 0);
+  controls.target = new THREE.Vector3(0, 20, 0);
   controls.enableDamping = true;
   // controls.autoRotate = true;
   // controls.autoRotateSpeed = 0.5;
@@ -78,10 +104,16 @@ function init() {
 
   //---------------- GUI --------------------------
 
+  stats = new Stats();
+  document.body.appendChild(stats.dom);
+
   const gui = new GUI();
   const folder1 = gui.addFolder("Particles");
   folder1.add(params, "particleCount", 1000, 50000).onChange(resample);
   folder1.add(params, "particleSize", 0, 5).onChange(changeParticleSize);
+  folder1.add(params, "particleSizeVariation", 0, 1, 0.01).onChange(changeParticleSize);
+  folder1.add(params, "particlesWobble", 0, 1, 0.01);
+  gui.add(tweenParams, "startAnim");
 
   buildParticles();
 }
@@ -99,6 +131,9 @@ function animate(time) {
 //---------------- Render --------------------------
 
 function render() {
+  uniformsValues["time"].value = performance.now() * 0.0000001;
+  uniformsValues["wobble"].value = params.particlesWobble;
+  // uniformsValues.needsUpdate = true;
   renderer.render(scene, camera);
 }
 //---------------- Window resize --------------------------
@@ -118,7 +153,7 @@ function buildParticles() {
   for (let j = 0; j < MAX_PARTICLES; j++) {
     vertices.push(0, 0, 0);
     partColors.push(pc.r, pc.g, pc.b);
-    sizes.push(params.particleSize * viewportSurfaceArea);
+    sizes.push(params.particleSize * viewportSurfaceArea + (Math.random() - 0.5) * 2 * params.particleSizeVariation);
   }
 
   geometry.setAttribute("color", new THREE.Float32BufferAttribute(partColors, 3));
@@ -127,12 +162,14 @@ function buildParticles() {
 
   geometry.setDrawRange(0, params.particleCount);
 
-  const uniforms = {
+  uniformsValues = {
     rimColor: { value: new THREE.Color("rgb(255, 255, 255)") },
+    time: { value: 0.0 },
+    wobble: { value: params.particlesWobble },
   };
 
   shaderMaterial = new THREE.ShaderMaterial({
-    uniforms: uniforms,
+    uniforms: uniformsValues,
     vertexShader: document.getElementById("vertexshader").textContent,
     fragmentShader: document.getElementById("fragmentshader").textContent,
     // blending: THREE.AdditiveBlending,
@@ -197,7 +234,21 @@ function changeParticleSize() {
   const sizes = geometry.attributes.size.array;
 
   for (let i = 0; i < geometry.attributes.size.array.length; i++) {
-    sizes[i] = params.particleSize * viewportSurfaceArea;
+    sizes[i] = params.particleSize * viewportSurfaceArea + (Math.random() - 0.5) * 2 * params.particleSizeVariation;
   }
   geometry.attributes.size.needsUpdate = true;
+}
+
+function buildAnimation() {
+  const positions = particles.geometry.attributes.position.array;
+
+  for (let i = 0; i < surfaceVerts.length; i++) {
+    const originPoint = new THREE.Vector3(0);
+
+    positions[i * 3] = surfaceVerts[i].x + (originPoint.x - surfaceVerts[i].x) * tweenParams.transition;
+    positions[i * 3 + 1] = surfaceVerts[i].y + (originPoint.y - surfaceVerts[i].y) * tweenParams.transition;
+    positions[i * 3 + 2] = surfaceVerts[i].z + (originPoint.z - surfaceVerts[i].z) * tweenParams.transition;
+  }
+
+  particles.geometry.attributes.position.needsUpdate = true;
 }
