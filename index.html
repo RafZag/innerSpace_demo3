@@ -6,9 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Innerspace demoProject</title>
     <link type="text/css" rel="stylesheet" href="main.css" />
-    <script src="js/Tween.js"></script>
+    <script src="particleObject.js"></script>
+    <script src="libs/Tween.js"></script>
   </head>
   <body>
+    <div id="logo"></div>
+    <div id="gui"></div>
     <script type="x-shader/x-vertex" id="vertexshader">
 
       uniform float time;
@@ -16,7 +19,6 @@
       attribute float size;
       varying vec3 vColor;
       varying float dist;
-
 
       float hermite(float t)
       {
@@ -45,10 +47,9 @@
         mvPosition.y += (noise(time + .1, float(gl_VertexID)) - 0.5 ) * wobble;
         mvPosition.z += (noise(time - .1, float(gl_VertexID)) - 0.5 ) * wobble;
 
-        //mvPosition.x += sin(time) * 10.;
-
-        dist = 50.0 / -mvPosition.z;
+        dist = 150.0 / -mvPosition.z;
         gl_Position = projectionMatrix * mvPosition;
+
       }
     </script>
     <script type="x-shader/x-fragment" id="fragmentshader">
@@ -62,7 +63,8 @@
         if (distance(gl_PointCoord, vec2(0.5)) > .4) discard;
         float c = (sin(gl_PointCoord.x * 3.141592) + sin(gl_PointCoord.y * 3.141592)) / 2.;
         vec3 s = mix(rimColor, vColor, c);
-      	gl_FragColor = vec4(s, 1);
+        float alpha = dist*0.1;
+      	gl_FragColor = vec4(s, alpha);
       }
     </script>
     <script src="main.js" type="module"></script>

@@ -8,6 +8,9 @@ import { MeshSurfaceSampler } from "https://cdn.skypack.dev/three@0.132.0/exampl
 
 let camera, scene, renderer, stats, controls;
 let particles;
+let spaceParticles;
+let spaceVertices = [];
+
 let vertices = [];
 let surfaceVerts = [];
 let partColors = [];
@@ -17,19 +20,29 @@ let shaderMaterial;
 const meshURL = "gltf/human.glb";
 const gltfLoader = new GLTFLoader();
 const MAX_PARTICLES = 500000;
+const MAX_SIZE = 6;
 let uniformsValues;
-let time;
+let animDirection = true;
+let lastZoom;
 
 let viewportSurfaceArea = window.innerWidth * window.innerHeight * 0.0000001;
 
+const colorPallete = {
+  color1: 0x69bc9f,
+  color2: 0x74d5a7,
+  color3: 0x84d6cd,
+  color4: 0x9ce5f0,
+  color5: 0xe1e9f1,
+};
+
 const params = {
-  particleColor: 0x4fcfae,
-  particleCount: 35000,
-  surfaceColor: 0x999999,
-  particleSize: 1.7,
-  particleSizeVariation: 0.1,
-  particlesWobble: 0.1,
   backgroundColor: 0xdfe9f2,
+  particleColor: 0x4fcfae,
+  particleCount: 80000,
+  particleSize: 1.25,
+  particleSizeVariation: 0.025,
+  particlesWobble: 0.08,
+  wobbleSpeed: 0.03,
 };
 
 const tweenParams = {
@@ -38,9 +51,11 @@ const tweenParams = {
   startAnim: function () {
     if (this.transition == 1) {
       buildTween.to({ transition: 0 }, tweenParams.duration).start();
+      animDirection = false;
     }
     if (this.transition == 0) {
       buildTween.to({ transition: 1 }, tweenParams.duration).start();
+      animDirection = true;
     }
   },
 };
@@ -70,7 +85,7 @@ function init() {
   //---------------- Camera --------------------------
 
   camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 3000);
-  camera.position.set(15, 25, 18);
+  camera.position.set(8, 25, 18);
 
   //---------------- Lights --------------------------
 
@@ -96,26 +111,35 @@ function init() {
   //---------------- Controls --------------------------
 
   controls = new OrbitControls(camera, renderer.domElement);
-  controls.target = new THREE.Vector3(0, 20, 0);
+  controls.target = new THREE.Vector3(0, 18, 0);
   controls.enableDamping = true;
+  lastZoom = 0;
+  controls.addEventListener("change", () => {
+    zoomResample();
+  });
   // controls.autoRotate = true;
   // controls.autoRotateSpeed = 0.5;
   window.addEventListener("resize", onWindowResize);
 
   //---------------- GUI --------------------------
 
-  stats = new Stats();
-  document.body.appendChild(stats.dom);
+  // stats = new Stats();
+  // document.body.appendChild(stats.dom);
 
   const gui = new GUI();
   const folder1 = gui.addFolder("Particles");
-  folder1.add(params, "particleCount", 1000, 50000).onChange(resample);
-  folder1.add(params, "particleSize", 0, 5).onChange(changeParticleSize);
+  folder1.add(params, "particleCount", 1000, 500000).onChange(resample).listen();
+  folder1.add(params, "particleSize", 0, 5).onChange(changeParticleSize).listen();
   folder1.add(params, "particleSizeVariation", 0, 1, 0.01).onChange(changeParticleSize);
   folder1.add(params, "particlesWobble", 0, 1, 0.01);
+  folder1.add(params, "wobbleSpeed", 0, 2, 0.01);
   gui.add(tweenParams, "startAnim");
 
+  gui.close();
+
+  buildSpaceParticles();
   buildParticles();
+  zoomResample();
 }
 
 //---------------- Animate --------------------------
@@ -124,14 +148,16 @@ function animate(time) {
   requestAnimationFrame(animate);
   render();
   controls.update();
-  stats.update();
+  // stats.update();
   TWEEN.update(time);
 }
 
 //---------------- Render --------------------------
 
 function render() {
-  uniformsValues["time"].value = performance.now() * 0.0000001;
+  spaceParticles.rotation.y += 0.0002;
+  // spaceParticles.rotation.x += 0.0002;
+  uniformsValues["time"].value = performance.now() * params.wobbleSpeed * 0.0000001;
   uniformsValues["wobble"].value = params.particlesWobble;
   // uniformsValues.needsUpdate = true;
   renderer.render(scene, camera);
@@ -144,6 +170,33 @@ function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+}
+function buildSpaceParticles() {
+  let spaceParticlesGeo = new THREE.BufferGeometry();
+  const sprite = new THREE.TextureLoader().load("img/pointSprite.png");
+
+  for (let i = 0; i < 2000; i++) {
+    const x = 1000 * Math.random() - 500;
+    const y = 1000 * Math.random() - 500;
+    const z = 1000 * Math.random() - 500;
+
+    spaceVertices.push(x, y, z);
+  }
+  spaceParticlesGeo.setAttribute("position", new THREE.Float32BufferAttribute(spaceVertices, 3));
+
+  let mat = new THREE.PointsMaterial({
+    size: 5,
+    sizeAttenuation: true,
+    map: sprite,
+    // blending: THREE.AdditiveBlending,
+    depthTest: false,
+    alphaTest: 0.1,
+    transparent: true,
+  });
+  mat.color.set(params.particleColor);
+
+  spaceParticles = new THREE.Points(spaceParticlesGeo, mat);
+  scene.add(spaceParticles);
 }
 
 function buildParticles() {
@@ -223,11 +276,23 @@ function surfaceScatter() {
     positions[index++] = surfaceVerts[i].z;
   }
   particles.geometry.attributes.position.needsUpdate = true;
+  zoomResample();
 }
 
 function resample() {
   geometry.setDrawRange(0, params.particleCount);
   geometry.attributes.position.needsUpdate = true;
+}
+
+function zoomResample() {
+  let dist = controls.getDistance();
+  if (Math.abs(lastZoom - dist) > 1) {
+    params.particleCount = (MAX_PARTICLES * 50) / (dist * dist);
+    resample();
+    params.particleSize = (MAX_SIZE * dist) / 70;
+    changeParticleSize();
+    lastZoom = dist;
+  }
 }
 
 function changeParticleSize() {
@@ -242,12 +307,13 @@ function changeParticleSize() {
 function buildAnimation() {
   const positions = particles.geometry.attributes.position.array;
 
-  for (let i = 0; i < surfaceVerts.length; i++) {
-    const originPoint = new THREE.Vector3(0);
+  let trans = tweenParams.transition;
+  const originPoint = new THREE.Vector3(0);
 
-    positions[i * 3] = surfaceVerts[i].x + (originPoint.x - surfaceVerts[i].x) * tweenParams.transition;
-    positions[i * 3 + 1] = surfaceVerts[i].y + (originPoint.y - surfaceVerts[i].y) * tweenParams.transition;
-    positions[i * 3 + 2] = surfaceVerts[i].z + (originPoint.z - surfaceVerts[i].z) * tweenParams.transition;
+  for (let i = 0; i < surfaceVerts.length; i++) {
+    positions[i * 3] = surfaceVerts[i].x + (originPoint.x - surfaceVerts[i].x) * trans;
+    positions[i * 3 + 1] = surfaceVerts[i].y + (originPoint.y - surfaceVerts[i].y) * trans;
+    positions[i * 3 + 2] = surfaceVerts[i].z + (originPoint.z - surfaceVerts[i].z) * trans;
   }
 
   particles.geometry.attributes.position.needsUpdate = true;
