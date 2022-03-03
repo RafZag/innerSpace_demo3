@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Innerspace demoProject</title>
     <link type="text/css" rel="stylesheet" href="main.css" />
-    <script src="particleObject.js"></script>
     <script src="libs/Tween.js"></script>
   </head>
   <body>
@@ -49,7 +48,6 @@
 
         dist = 150.0 / -mvPosition.z;
         gl_Position = projectionMatrix * mvPosition;
-
       }
     </script>
     <script type="x-shader/x-fragment" id="fragmentshader">
@@ -67,6 +65,7 @@
       	gl_FragColor = vec4(s, alpha);
       }
     </script>
+    <script src="particleObject.js" type="module"></script>
     <script src="main.js" type="module"></script>
   </body>
 </html>
