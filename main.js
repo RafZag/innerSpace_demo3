@@ -12,6 +12,7 @@ let classTest;
 const meshURL = "gltf/human.glb";
 
 let animDirection = true;
+let darkMode = false;
 let lastZoom;
 
 let viewportSurfaceArea = window.innerWidth * window.innerHeight * 0.0000001;
@@ -26,6 +27,17 @@ const colorPallete = {
 
 const params = {
   backgroundColor: 0xdfe9f2,
+  darkBackground: 0x000000,
+  changeBG: function () {
+    darkMode = !darkMode;
+    if (darkMode) {
+      classTest.changeRimColor(new THREE.Color("rgb(0, 0, 0)"));
+      renderer.setClearColor(params.darkBackground);
+    } else {
+      classTest.changeRimColor(new THREE.Color("rgb(255, 255, 255)"));
+      renderer.setClearColor(0, 0);
+    }
+  },
 };
 
 const tweenParams = {
@@ -79,7 +91,7 @@ function init() {
   //---------------- Render --------------------------
 
   renderer = new THREE.WebGLRenderer({ antyalias: true, alpha: true });
-  // renderer.setClearColor(params.backgroundColor);
+
   // renderer.setClearAlpha(0,0);
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -91,9 +103,10 @@ function init() {
   controls.target = new THREE.Vector3(0, 18, 0);
   controls.enableDamping = true;
   lastZoom = 0;
-  // controls.addEventListener("change", () => {
-  //   zoomResample();
-  // });
+  controls.addEventListener("change", () => {
+    let d = controls.getDistance();
+    classTest.zoomResample(d);
+  });
   // controls.autoRotate = true;
   // controls.autoRotateSpeed = 0.5;
   window.addEventListener("resize", onWindowResize);
@@ -103,23 +116,22 @@ function init() {
   // stats = new Stats();
   // document.body.appendChild(stats.dom);
 
-  // const gui = new GUI();
+  const gui = new GUI();
   // const folder1 = gui.addFolder("Particles");
   // folder1.add(params, "particleCount", 1000, 500000).onChange(resample).listen();
   // folder1.add(params, "particleSize", 0, 5).onChange(changeParticleSize).listen();
   // folder1.add(params, "particleSizeVariation", 0, 1, 0.01).onChange(changeParticleSize);
   // folder1.add(params, "particlesWobble", 0, 1, 0.01);
   // folder1.add(params, "wobbleSpeed", 0, 2, 0.01);
-  // gui.add(tweenParams, "startAnim");
-
+  gui.add(params, "changeBG");
   // gui.close();
 
   buildSpaceParticles();
-  // buildParticles();
+
   // zoomResample();
 
   classTest = new particleObject(scene, "gltf/human.glb", colorPallete.color1);
-  // console.log(classTest);
+  classTest.changeParticleSize();
 }
 
 //---------------- Animate --------------------------
@@ -137,14 +149,14 @@ function animate(time) {
 function render() {
   spaceParticles.rotation.y += 0.0002;
   // spaceParticles.rotation.x += 0.0002;
+
   classTest.update();
   renderer.render(scene, camera);
 }
 //---------------- Window resize --------------------------
 
 function onWindowResize() {
-  viewportSurfaceArea = window.innerWidth * window.innerHeight * 0.0000001;
-  // changeParticleSize();
+  classTest.changeParticleSize();
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -155,9 +167,9 @@ function buildSpaceParticles() {
   const sprite = new THREE.TextureLoader().load("img/pointSprite.png");
 
   for (let i = 0; i < 2000; i++) {
-    const x = 1000 * Math.random() - 500;
-    const y = 1000 * Math.random() - 500;
-    const z = 1000 * Math.random() - 500;
+    const x = 800 * Math.random() - 400;
+    const y = 800 * Math.random() - 400;
+    const z = 800 * Math.random() - 400;
 
     spaceVertices.push(x, y, z);
   }

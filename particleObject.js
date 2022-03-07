@@ -25,10 +25,12 @@ class particleObject {
 
   uniformsValues;
 
+  lastZoom = 0;
+
   params = {
     particleColor: 0x4fcfae,
     particleCount: 80000,
-    particleSize: 0.25,
+    particleSize: 0.2,
     particleSizeVariation: 0.025,
     particlesWobble: 0.08,
     wobbleSpeed: 0.03,
@@ -143,24 +145,31 @@ class particleObject {
     this.geometry.attributes.position.needsUpdate = true;
   }
 
-  //   zoomResample() {
-  //     let dist = controls.getDistance();
-  //     if (Math.abs(lastZoom - dist) > 1) {
-  //       params.particleCount = (MAX_PARTICLES * 50) / (dist * dist);
-  //       resample();
-  //       params.particleSize = (MAX_SIZE * dist) / 70;
-  //       changeParticleSize();
-  //       lastZoom = dist;
-  //     }
-  //   }
+  zoomResample(dist) {
+    if (Math.abs(this.lastZoom - dist) > 1) {
+      this.params.particleCount = (this.MAX_PARTICLES * 50) / (dist * dist);
+      this.resample();
+      this.params.particleSize = (this.MAX_SIZE * dist) / 500;
+      this.changeParticleSize();
+      this.lastZoom = dist;
+    }
+  }
 
-  //   changeParticleSize() {
-  //     const sizes = this.geometry.attributes.size.array;
-  //     for (let i = 0; i < geometry.attributes.size.array.length; i++) {
-  //       sizes[i] = this.params.particleSize * viewportSurfaceArea + (Math.random() - 0.5) * 2 * this.params.particleSizeVariation;
-  //     }
-  //     geometry.attributes.size.needsUpdate = true;
-  //   }
+  changeParticleSize() {
+    let viewportSurfaceArea = window.innerWidth * window.innerHeight * 0.000001;
+    // console.log(viewportSurfaceArea);
+    const sizes = this.geometry.attributes.size.array;
+    for (let i = 0; i < this.geometry.attributes.size.array.length; i++) {
+      sizes[i] = this.params.particleSize * viewportSurfaceArea + (Math.random() - 0.5) * 2 * this.params.particleSizeVariation;
+      // sizes[i] = this.params.particleSize + (Math.random() - 0.5) * 2 * this.params.particleSizeVariation;
+    }
+    this.geometry.attributes.size.needsUpdate = true;
+  }
+
+  changeRimColor(col) {
+    this.uniformsValues["rimColor"].value = col;
+    this.uniformsValues.needsUpdate = true;
+  }
 
   update() {
     // console.log(performance.now());
