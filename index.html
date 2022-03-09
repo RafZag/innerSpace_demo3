@@ -46,7 +46,7 @@
         mvPosition.y += (noise(time + .1, float(gl_VertexID)) - 0.5 ) * wobble;
         mvPosition.z += (noise(time - .1, float(gl_VertexID)) - 0.5 ) * wobble;
 
-        dist = 150.0 / -mvPosition.z;
+        dist = -mvPosition.z;
         gl_Position = projectionMatrix * mvPosition;
       }
     </script>
@@ -61,7 +61,8 @@
         if (distance(gl_PointCoord, vec2(0.5)) > .4) discard;
         float c = (sin(gl_PointCoord.x * 3.141592) + sin(gl_PointCoord.y * 3.141592)) / 2.;
         vec3 s = mix(rimColor, vColor, c);
-        float alpha = dist*0.1;
+        //float alpha = -(0.1 * dist - 0.5)*(0.1 * dist - 0.5) + 1.;
+        float alpha = 1. * 500. / (dist*dist);
       	gl_FragColor = vec4(s, alpha);
       }
     </script>

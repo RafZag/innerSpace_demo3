@@ -7,15 +7,12 @@ import { particleObject } from "/particleObject.js";
 let camera, scene, renderer, stats, controls;
 let spaceParticles;
 let spaceVertices = [];
+let sceneObjects = [];
 
 let classTest;
-const meshURL = "gltf/human.glb";
 
-let animDirection = true;
 let darkMode = false;
 let lastZoom;
-
-let viewportSurfaceArea = window.innerWidth * window.innerHeight * 0.0000001;
 
 const colorPallete = {
   color1: 0x4fcfae,
@@ -26,6 +23,9 @@ const colorPallete = {
 };
 
 const params = {
+  sizeMult: 0.8,
+  countMult: 50,
+  partCount: 80000,
   backgroundColor: 0xdfe9f2,
   darkBackground: 0x000000,
   changeBG: function () {
@@ -65,6 +65,10 @@ let buildTween = new TWEEN.Tween(tweenParams)
     buildAnimation();
   });
 
+const stage = {
+  objects: [],
+};
+
 init();
 animate();
 
@@ -74,7 +78,7 @@ function init() {
   //---------------- Camera --------------------------
 
   camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 3000);
-  camera.position.set(8, 25, 18);
+  camera.position.set(8, 15, 10);
 
   //---------------- Lights --------------------------
 
@@ -100,13 +104,16 @@ function init() {
   //---------------- Controls --------------------------
 
   controls = new OrbitControls(camera, renderer.domElement);
-  controls.target = new THREE.Vector3(0, 18, 0);
+  // controls.target = new THREE.Vector3(0, 18, 0);
   controls.enableDamping = true;
   lastZoom = 0;
-  controls.addEventListener("change", () => {
-    let d = controls.getDistance();
-    classTest.zoomResample(d);
-  });
+  // controls.addEventListener("change", () => {
+  //   for (let i = 0; i < sceneObjects.length; i++) {
+  //     const pos = sceneObjects[i].position;
+  //     let d = pos.distanceTo(camera.position);
+  //     sceneObjects[i].zoomResample(d);
+  //   }
+  // });
   // controls.autoRotate = true;
   // controls.autoRotateSpeed = 0.5;
   window.addEventListener("resize", onWindowResize);
@@ -117,12 +124,23 @@ function init() {
   // document.body.appendChild(stats.dom);
 
   const gui = new GUI();
-  // const folder1 = gui.addFolder("Particles");
+  const folder1 = gui.addFolder("Particles");
   // folder1.add(params, "particleCount", 1000, 500000).onChange(resample).listen();
-  // folder1.add(params, "particleSize", 0, 5).onChange(changeParticleSize).listen();
+  folder1
+    .add(params, "sizeMult", 0, 2, 0.01)
+    .onChange(() => {
+      classTest.params.particleSizeMult = params.sizeMult;
+      classTest.changeParticleSize();
+    })
+    .listen();
   // folder1.add(params, "particleSizeVariation", 0, 1, 0.01).onChange(changeParticleSize);
   // folder1.add(params, "particlesWobble", 0, 1, 0.01);
-  // folder1.add(params, "wobbleSpeed", 0, 2, 0.01);
+  folder1.add(params, "countMult", 10, 100).onChange(() => {
+    for (let i = 0; i < sceneObjects.length; i++) {
+      sceneObjects[i].params.particleCntMult = params.countMult;
+      sceneObjects[i].resample();
+    }
+  });
   gui.add(params, "changeBG");
   // gui.close();
 
@@ -130,8 +148,13 @@ function init() {
 
   // zoomResample();
 
-  classTest = new particleObject(scene, "gltf/human.glb", colorPallete.color1);
-  classTest.changeParticleSize();
+  for (let o = 0; o < 8; o++) {
+    const tmp = new particleObject(scene, "gltf/cell.glb", colorPallete.color1);
+    tmp.changeParticleSize();
+    tmp.setScale(new THREE.Vector3(0.5, 0.5, 0.5));
+    tmp.setPosition(new THREE.Vector3(50 * Math.random() - 25, 50 * Math.random() - 25, 50 * Math.random() - 25));
+    sceneObjects.push(tmp);
+  }
 }
 
 //---------------- Animate --------------------------
@@ -150,13 +173,15 @@ function render() {
   spaceParticles.rotation.y += 0.0002;
   // spaceParticles.rotation.x += 0.0002;
 
-  classTest.update();
+  for (let i = 0; i < sceneObjects.length; i++) {
+    sceneObjects[i].update(camera);
+  }
+
   renderer.render(scene, camera);
 }
 //---------------- Window resize --------------------------
 
 function onWindowResize() {
-  classTest.changeParticleSize();
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);

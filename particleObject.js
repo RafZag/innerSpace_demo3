@@ -6,6 +6,9 @@ class particleObject {
   scene;
   positon = new THREE.Vector3();
   rotation = new THREE.Vector3();
+  scale = new THREE.Vector3();
+  spinRate = 0.6;
+  floatRate = 0.5;
 
   visible = true;
   particles; // THREE.Points(); - main object added to scene
@@ -29,8 +32,10 @@ class particleObject {
 
   params = {
     particleColor: 0x4fcfae,
-    particleCount: 80000,
+    particleCount: 40000,
+    particleCntMult: 50,
     particleSize: 0.2,
+    particleSizeMult: 0.8,
     particleSizeVariation: 0.025,
     particlesWobble: 0.08,
     wobbleSpeed: 0.03,
@@ -137,7 +142,7 @@ class particleObject {
       positions[index++] = this.surfaceVerts[i].z;
     }
     this.particles.geometry.attributes.position.needsUpdate = true;
-    //zoomResample();
+    // zoomResample();
   }
 
   resample() {
@@ -147,7 +152,7 @@ class particleObject {
 
   zoomResample(dist) {
     if (Math.abs(this.lastZoom - dist) > 1) {
-      this.params.particleCount = (this.MAX_PARTICLES * 50) / (dist * dist);
+      this.params.particleCount = (this.MAX_PARTICLES * this.params.particleCntMult) / (dist * dist);
       this.resample();
       this.params.particleSize = (this.MAX_SIZE * dist) / 500;
       this.changeParticleSize();
@@ -157,11 +162,11 @@ class particleObject {
 
   changeParticleSize() {
     let viewportSurfaceArea = window.innerWidth * window.innerHeight * 0.000001;
-    // console.log(viewportSurfaceArea);
+
     const sizes = this.geometry.attributes.size.array;
     for (let i = 0; i < this.geometry.attributes.size.array.length; i++) {
-      sizes[i] = this.params.particleSize * viewportSurfaceArea + (Math.random() - 0.5) * 2 * this.params.particleSizeVariation;
-      // sizes[i] = this.params.particleSize + (Math.random() - 0.5) * 2 * this.params.particleSizeVariation;
+      sizes[i] =
+        this.params.particleSize * this.params.particleSizeMult * viewportSurfaceArea + (Math.random() - 0.5) * 2 * this.params.particleSizeVariation;
     }
     this.geometry.attributes.size.needsUpdate = true;
   }
@@ -171,8 +176,33 @@ class particleObject {
     this.uniformsValues.needsUpdate = true;
   }
 
-  update() {
+  spin(speed) {
+    this.particles.rotation.y = performance.now() * (speed * 0.0001);
+  }
+  float(speed) {
+    this.particles.position.y += 0.1 * Math.sin(performance.now() * speed * 0.0001);
+  }
+
+  setScale(vec) {
+    this.particles.scale.x = vec.x;
+    this.particles.scale.y = vec.y;
+    this.particles.scale.z = vec.z;
+  }
+
+  setPosition(vec) {
+    // console.log(vec);
+    this.position = vec;
+    this.particles.position.x += vec.x;
+    this.particles.position.y += vec.y;
+    this.particles.position.z += vec.z;
+  }
+
+  update(cam) {
     // console.log(performance.now());
+    const d = this.position.distanceTo(cam.position);
+    this.zoomResample(d);
+    this.spin(this.spinRate);
+    // this.float(this.floatRate);
     this.uniformsValues["time"].value = performance.now() * this.params.wobbleSpeed * 0.0000001;
     this.uniformsValues["wobble"].value = this.params.particlesWobble;
     this.uniformsValues.needsUpdate = true;
