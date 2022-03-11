@@ -6,9 +6,10 @@ class particleObject {
   container;
   positon = new THREE.Vector3();
   rotation = new THREE.Vector3();
-  scale = new THREE.Vector3();
+  scale = 1.0;
   spinRate = 0.2;
   floatRate = 0.5;
+  uuid;
 
   visible = true;
   particles; // THREE.Points(); - main object added to scene
@@ -32,9 +33,9 @@ class particleObject {
   params = {
     particleColor: 0x4fcfae,
     particleCount: 20000,
-    particleCntMult: 25,
+    particleCntMult: 65,
     particleSize: 0.2,
-    particleSizeMult: 0.6,
+    particleSizeMult: 0.44,
     particleSizeVariation: 0.025,
     particlesWobble: 0.08,
     wobbleSpeed: 0.03,
@@ -97,6 +98,7 @@ class particleObject {
     mat.color.set(this.params.particleColor);
 
     this.particles = new THREE.Points(this.geometry, shaderMaterial);
+    this.uuid = this.particles.uuid;
     this.particles.frustumCulled = false; ////  object visibility fixed
 
     this.container.add(this.particles);
@@ -107,7 +109,7 @@ class particleObject {
     this.gltfLoader.load(
       url,
       function (gltf) {
-        // this.scene.add(gltf.scene);
+        // this.container.add(gltf.scene);
         this.surfaceMesh = gltf.scene.children[0]; // Object
         // console.log(gltf);
         this.sampler = new MeshSurfaceSampler(this.surfaceMesh).setWeightAttribute("color").build();
@@ -194,11 +196,11 @@ class particleObject {
     this.particles.position.y += 0.1 * Math.sin(performance.now() * speed * 0.0001);
   }
 
-  setScale(vec) {
-    this.scale = vec;
-    this.particles.scale.x = vec.x;
-    this.particles.scale.y = vec.y;
-    this.particles.scale.z = vec.z;
+  setScale(sc) {
+    this.scale = sc;
+    this.particles.scale.x = sc;
+    this.particles.scale.y = sc;
+    this.particles.scale.z = sc;
   }
 
   setPosition(vec) {
@@ -218,6 +220,12 @@ class particleObject {
   update() {
     // console.log(performance.now());
     this.spin(this.spinRate);
+    if (this.scale != this.particles.scale.x) {
+      const sc = this.scale - this.particles.scale.x;
+      this.particles.scale.x += sc * 0.2;
+      this.particles.scale.y += sc * 0.2;
+      this.particles.scale.z += sc * 0.2;
+    }
     // this.float(this.floatRate);
     this.uniformsValues["time"].value = performance.now() * this.params.wobbleSpeed * 0.0000001;
     this.uniformsValues["wobble"].value = this.params.particlesWobble;

@@ -4,6 +4,18 @@ import { GUI } from "https://cdn.skypack.dev/three@0.137.0/examples/jsm/libs/lil
 import Stats from "https://cdn.skypack.dev/three@0.132.0/examples/jsm/libs/stats.module.js";
 import { particleObject } from "./particleObject.js";
 
+///////////////////////////// BROWSER CHECK
+
+let isSafari = false;
+
+let isMobile = false;
+
+if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+  isMobile = true;
+} else {
+  isMobile = false;
+}
+
 let camera, scene, renderer, stats, controls;
 let spaceParticles;
 let spaceVertices = [];
@@ -16,7 +28,7 @@ const storyStage = {
 
 let darkMode = false;
 
-let mouse = new THREE.Vector2();
+let mouse = new THREE.Vector3(0, 0, 0.5);
 let camTargetRotX = 0;
 let camTargetRotY = 0;
 
@@ -24,8 +36,8 @@ const colorPallete = [0x4fcfae, 0x74d5a7, 0x84d6cd, 0x9ce5f0, 0xe1e9f1];
 
 const params = {
   camRot: 0.4,
-  sizeMult: 0.6,
-  countMult: 25,
+  sizeMult: 0.44,
+  countMult: 65,
   backgroundColor: 0xdfe9f2,
   darkBackground: 0x000000,
   changeBG: function () {
@@ -43,6 +55,11 @@ const params = {
     }
   },
 };
+
+/////////////////////// RAYCASTER
+
+const raycaster = new THREE.Raycaster();
+// raycaster.layers.set(1);
 
 init();
 animate();
@@ -96,6 +113,7 @@ function init() {
   window.addEventListener("resize", onWindowResize);
   document.addEventListener("mousemove", onDocumentMouseMove, false);
   document.addEventListener("wheel", onDocumentWheel, false);
+  document.addEventListener("click", onDocumentClick, false);
 
   //---------------- GUI --------------------------
 
@@ -133,7 +151,7 @@ function init() {
     // const tmp = new particleObject(scene, "gltf/cell.glb", colorPallete[Math.floor(Math.random() * (colorPallete.length - 1))]);
     const tmp = new particleObject(storyStage.stageCointainer, "gltf/cell.glb", colorPallete[0]);
     tmp.changeParticleSize();
-    tmp.setScale(new THREE.Vector3(0.5, 0.5, 0.5));
+    tmp.setScale(0.5);
     tmp.setRotation(
       new THREE.Vector3(2 * Math.PI * Math.random() - Math.PI, 2 * Math.PI * Math.random() - Math.PI, 2 * Math.PI * Math.random() - Math.PI)
     );
@@ -143,6 +161,11 @@ function init() {
     storyStage.sceneObjects.push(tmp);
   }
   scene.add(storyStage.stageCointainer);
+
+  // const geometry = new THREE.BoxGeometry(1, 1, 1);
+  // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  // const cube = new THREE.Mesh(geometry, material);
+  // scene.add(cube);
 }
 
 //---------------- Animate --------------------------
@@ -181,6 +204,44 @@ function onDocumentMouseMove(event) {
 
   camTargetRotX = mouse.y * params.camRot;
   camTargetRotY = -mouse.x * params.camRot;
+
+  mouse.unproject(camera);
+  let raycaster = new THREE.Raycaster(camera.position, mouse.sub(camera.position).normalize());
+  const intersects = raycaster.intersectObjects(storyStage.stageCointainer.children);
+
+  if (intersects.length > 0) {
+    if (intersects[0].object.visible) document.body.style.cursor = "pointer";
+    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+      if (storyStage.sceneObjects[i].uuid == intersects[0].object.uuid) {
+        storyStage.sceneObjects[i].scale = 0.7;
+      }
+    }
+  } else {
+    document.body.style.cursor = "default";
+    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+      storyStage.sceneObjects[i].scale = 0.5;
+    }
+  }
+}
+
+function onDocumentClick(event) {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  mouse.unproject(camera);
+  let raycaster = new THREE.Raycaster(camera.position, mouse.sub(camera.position).normalize());
+  const intersects = raycaster.intersectObjects(storyStage.stageCointainer.children);
+
+  if (intersects.length > 0) {
+    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+      if (storyStage.sceneObjects[i].uuid == intersects[0].object.uuid) {
+        // console.log(storyStage.sceneObjects[i].uuid);
+        storyStage.sceneObjects[i].changeColor(colorPallete[Math.floor(Math.random() * (colorPallete.length - 1))]);
+      }
+    }
+    //console.log(intersects[0].object.uuid);
+    // intersects[0].object.visible = false;
+  }
 }
 
 function onDocumentWheel(event) {
