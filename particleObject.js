@@ -3,11 +3,11 @@ import { GLTFLoader } from "https://cdn.skypack.dev/three@0.132.0/examples/jsm/l
 import { MeshSurfaceSampler } from "https://cdn.skypack.dev/three@0.132.0/examples/jsm/math/MeshSurfaceSampler.js";
 
 class particleObject {
-  scene;
+  container;
   positon = new THREE.Vector3();
   rotation = new THREE.Vector3();
   scale = new THREE.Vector3();
-  spinRate = 0.6;
+  spinRate = 0.2;
   floatRate = 0.5;
 
   visible = true;
@@ -24,7 +24,6 @@ class particleObject {
 
   surfaceMesh;
   sampler;
-  _position = new THREE.Vector3();
 
   uniformsValues;
 
@@ -32,10 +31,10 @@ class particleObject {
 
   params = {
     particleColor: 0x4fcfae,
-    particleCount: 40000,
-    particleCntMult: 50,
+    particleCount: 20000,
+    particleCntMult: 25,
     particleSize: 0.2,
-    particleSizeMult: 0.8,
+    particleSizeMult: 0.6,
     particleSizeVariation: 0.025,
     particlesWobble: 0.08,
     wobbleSpeed: 0.03,
@@ -44,8 +43,8 @@ class particleObject {
   MAX_PARTICLES = 500000;
   MAX_SIZE = 6;
 
-  constructor(scene, model, col) {
-    this.scene = scene;
+  constructor(container, model, col) {
+    this.container = container;
     this.params.particleColor = new THREE.Color(col);
     this.modelURL = model;
     this.buildParticles();
@@ -100,7 +99,7 @@ class particleObject {
     this.particles = new THREE.Points(this.geometry, shaderMaterial);
     this.particles.frustumCulled = false; ////  object visibility fixed
 
-    this.scene.add(this.particles);
+    this.container.add(this.particles);
     this.loadMesh(this.modelURL);
   }
 
@@ -124,9 +123,10 @@ class particleObject {
   }
 
   sampleSurface() {
+    let _position = new THREE.Vector3();
     for (let i = 0; i < this.MAX_PARTICLES; i++) {
-      this.sampler.sample(this._position);
-      let v = new THREE.Vector3(this._position.x, this._position.y, this._position.z);
+      this.sampler.sample(_position);
+      let v = new THREE.Vector3(_position.x, _position.y, _position.z);
       this.surfaceVerts.push(v);
     }
     this.surfaceScatter();
@@ -142,7 +142,6 @@ class particleObject {
       positions[index++] = this.surfaceVerts[i].z;
     }
     this.particles.geometry.attributes.position.needsUpdate = true;
-    // zoomResample();
   }
 
   resample() {
@@ -150,14 +149,15 @@ class particleObject {
     this.geometry.attributes.position.needsUpdate = true;
   }
 
-  zoomResample(dist) {
-    if (Math.abs(this.lastZoom - dist) > 1) {
-      this.params.particleCount = (this.MAX_PARTICLES * this.params.particleCntMult) / (dist * dist);
-      this.resample();
-      this.params.particleSize = (this.MAX_SIZE * dist) / 500;
-      this.changeParticleSize();
-      this.lastZoom = dist;
-    }
+  zoomResample(cam) {
+    const dist = this.position.distanceTo(cam.position);
+    // if (Math.abs(this.lastZoom - dist) > 1) {
+    this.params.particleCount = (this.MAX_PARTICLES * this.params.particleCntMult) / (dist * dist);
+    this.resample();
+    this.params.particleSize = (this.MAX_SIZE * dist) / 500;
+    this.changeParticleSize();
+    // this.lastZoom = dist;
+    // }
   }
 
   changeParticleSize() {
@@ -176,6 +176,17 @@ class particleObject {
     this.uniformsValues.needsUpdate = true;
   }
 
+  changeColor(col) {
+    let c = new THREE.Color(col);
+    const cols = this.geometry.attributes.color.array;
+    for (let i = 0; i < this.geometry.attributes.size.array.length; i++) {
+      cols[i * 3] = c.r;
+      cols[i * 3 + 1] = c.g;
+      cols[i * 3 + 2] = c.b;
+    }
+    this.geometry.attributes.color.needsUpdate = true;
+  }
+
   spin(speed) {
     this.particles.rotation.y = performance.now() * (speed * 0.0001);
   }
@@ -184,23 +195,28 @@ class particleObject {
   }
 
   setScale(vec) {
+    this.scale = vec;
     this.particles.scale.x = vec.x;
     this.particles.scale.y = vec.y;
     this.particles.scale.z = vec.z;
   }
 
   setPosition(vec) {
-    // console.log(vec);
     this.position = vec;
-    this.particles.position.x += vec.x;
-    this.particles.position.y += vec.y;
-    this.particles.position.z += vec.z;
+    this.particles.position.x = vec.x;
+    this.particles.position.y = vec.y;
+    this.particles.position.z = vec.z;
   }
 
-  update(cam) {
+  setRotation(vec) {
+    this.rotation = vec;
+    this.particles.rotation.x = vec.x;
+    this.particles.rotation.y = vec.y;
+    this.particles.rotation.z = vec.z;
+  }
+
+  update() {
     // console.log(performance.now());
-    const d = this.position.distanceTo(cam.position);
-    this.zoomResample(d);
     this.spin(this.spinRate);
     // this.float(this.floatRate);
     this.uniformsValues["time"].value = performance.now() * this.params.wobbleSpeed * 0.0000001;
