@@ -3,11 +3,11 @@ import { OrbitControls } from "https://cdn.skypack.dev/three@0.132.0/examples/js
 import { GUI } from "https://cdn.skypack.dev/three@0.137.0/examples/jsm/libs/lil-gui.module.min.js";
 import Stats from "https://cdn.skypack.dev/three@0.132.0/examples/jsm/libs/stats.module.js";
 import { particleObject } from "./particleObject.js";
+import { particleEmitter } from "./particleEmitter.js";
 
 ///////////////////////////// BROWSER CHECK
 
 let isSafari = false;
-
 let isMobile = false;
 
 if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
@@ -18,6 +18,7 @@ if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(naviga
 
 let camera, scene, renderer, stats, controls;
 let spaceParticles;
+let emitter;
 let spaceVertices = [];
 let plusZ = 0;
 
@@ -44,12 +45,12 @@ const params = {
     darkMode = !darkMode;
     if (darkMode) {
       for (let i = 0; i < storyStage.sceneObjects.length; i++) {
-        storyStage.sceneObjects[i].changeRimColor(new THREE.Color("rgb(0, 0, 0)"));
+        storyStage.sceneObjects[i].changeRimColor(new THREE.Color(params.darkBackground));
         renderer.setClearColor(params.darkBackground);
       }
     } else {
       for (let i = 0; i < storyStage.sceneObjects.length; i++) {
-        storyStage.sceneObjects[i].changeRimColor(new THREE.Color("rgb(255, 255, 255)"));
+        storyStage.sceneObjects[i].changeRimColor(new THREE.Color(0xffffff));
         renderer.setClearColor(0, 0);
       }
     }
@@ -122,7 +123,6 @@ function init() {
 
   const gui = new GUI();
   const folder1 = gui.addFolder("Particles");
-  // folder1.add(params, "particleCount", 1000, 500000).onChange(resample).listen();
   folder1
     .add(params, "sizeMult", 0, 2, 0.01)
     .onChange(() => {
@@ -132,8 +132,6 @@ function init() {
       }
     })
     .listen();
-  // folder1.add(params, "particleSizeVariation", 0, 1, 0.01).onChange(changeParticleSize);
-  // folder1.add(params, "particlesWobble", 0, 1, 0.01);
   folder1.add(params, "countMult", 10, 100).onChange(() => {
     for (let i = 0; i < storyStage.sceneObjects.length; i++) {
       storyStage.sceneObjects[i].params.particleCntMult = params.countMult;
@@ -141,31 +139,14 @@ function init() {
     }
   });
   gui.add(params, "changeBG");
-  // gui.close();
-
-  buildSpaceParticles();
+  gui.close();
 
   ///////////////////// Build scene, add objects
 
-  for (let o = 0; o < 8; o++) {
-    // const tmp = new particleObject(scene, "gltf/cell.glb", colorPallete[Math.floor(Math.random() * (colorPallete.length - 1))]);
-    const tmp = new particleObject(storyStage.stageCointainer, "gltf/cell.glb", colorPallete[0]);
-    tmp.changeParticleSize();
-    tmp.setScale(0.5);
-    tmp.setRotation(
-      new THREE.Vector3(2 * Math.PI * Math.random() - Math.PI, 2 * Math.PI * Math.random() - Math.PI, 2 * Math.PI * Math.random() - Math.PI)
-    );
-    tmp.setPosition(new THREE.Vector3(50 * Math.random() - 25, 30 * Math.random() - 15, -50 * Math.random()));
-    tmp.zoomResample(camera);
-    // tmp.changeColor(colorPallete[3]);
-    storyStage.sceneObjects.push(tmp);
-  }
   scene.add(storyStage.stageCointainer);
-
-  // const geometry = new THREE.BoxGeometry(1, 1, 1);
-  // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-  // const cube = new THREE.Mesh(geometry, material);
-  // scene.add(cube);
+  // buildSpaceParticles();
+  // buildScene();
+  emitter = new particleEmitter(storyStage.stageCointainer);
 }
 
 //---------------- Animate --------------------------
@@ -177,6 +158,8 @@ function animate(time) {
   plusZ += (0 - plusZ) * 0.05;
   storyStage.stageCointainer.position.z += plusZ;
 
+  emitter.update();
+
   requestAnimationFrame(animate);
   render();
   // controls.update();
@@ -187,7 +170,7 @@ function animate(time) {
 //---------------- Render --------------------------
 
 function render() {
-  spaceParticles.rotation.y += 0.0002;
+  // spaceParticles.rotation.y += 0.0002;
   // spaceParticles.rotation.x += 0.0002;
 
   for (let i = 0; i < storyStage.sceneObjects.length; i++) {
@@ -261,44 +244,43 @@ function onWindowResize() {
 
 // ----------------------------------------------
 
+function buildScene() {
+  for (let o = 0; o < 8; o++) {
+    const tmp = new particleObject(storyStage.stageCointainer, "gltf/cell.glb", colorPallete[0]);
+    tmp.changeParticleSize();
+    tmp.setScale(0.5);
+    tmp.setRotation(
+      new THREE.Vector3(2 * Math.PI * Math.random() - Math.PI, 2 * Math.PI * Math.random() - Math.PI, 2 * Math.PI * Math.random() - Math.PI)
+    );
+    tmp.setPosition(new THREE.Vector3(50 * Math.random() - 25, 30 * Math.random() - 15, -50 * Math.random()));
+    tmp.zoomResample(camera);
+    storyStage.sceneObjects.push(tmp);
+  }
+}
+
 function buildSpaceParticles() {
   let spaceParticlesGeo = new THREE.BufferGeometry();
   const sprite = new THREE.TextureLoader().load("img/pointSprite.png");
 
   for (let i = 0; i < 2000; i++) {
-    const x = 800 * Math.random() - 400;
-    const y = 800 * Math.random() - 400;
-    const z = 800 * Math.random() - 400;
+    const x = 600 * Math.random() - 300;
+    const y = 600 * Math.random() - 300;
+    const z = 600 * Math.random() - 300;
 
     spaceVertices.push(x, y, z);
   }
   spaceParticlesGeo.setAttribute("position", new THREE.Float32BufferAttribute(spaceVertices, 3));
 
   let mat = new THREE.PointsMaterial({
-    size: 5,
+    size: 4,
     sizeAttenuation: true,
     map: sprite,
     // blending: THREE.AdditiveBlending,
     depthTest: false,
-    alphaTest: 0.1,
+    // alphaTest: 0.01,
     transparent: true,
   });
   mat.color.set(colorPallete[0]);
   spaceParticles = new THREE.Points(spaceParticlesGeo, mat);
-  scene.add(spaceParticles);
+  storyStage.stageCointainer.add(spaceParticles);
 }
-
-// function buildAnimation() {
-//   const positions = particles.geometry.attributes.position.array;
-
-//   let trans = tweenParams.transition;
-//   const originPoint = new THREE.Vector3(0);
-
-//   for (let i = 0; i < surfaceVerts.length; i++) {
-//     positions[i * 3] = surfaceVerts[i].x + (originPoint.x - surfaceVerts[i].x) * trans;
-//     positions[i * 3 + 1] = surfaceVerts[i].y + (originPoint.y - surfaceVerts[i].y) * trans;
-//     positions[i * 3 + 2] = surfaceVerts[i].z + (originPoint.z - surfaceVerts[i].z) * trans;
-//   }
-
-//   particles.geometry.attributes.position.needsUpdate = true;
-// }

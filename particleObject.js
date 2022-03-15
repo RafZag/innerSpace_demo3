@@ -3,7 +3,7 @@ import { GLTFLoader } from "https://cdn.skypack.dev/three@0.132.0/examples/jsm/l
 import { MeshSurfaceSampler } from "https://cdn.skypack.dev/three@0.132.0/examples/jsm/math/MeshSurfaceSampler.js";
 
 class particleObject {
-  container;
+  parentContainer;
   positon = new THREE.Vector3();
   rotation = new THREE.Vector3();
   scale = 1.0;
@@ -44,8 +44,8 @@ class particleObject {
   MAX_PARTICLES = 500000;
   MAX_SIZE = 6;
 
-  constructor(container, model, col) {
-    this.container = container;
+  constructor(parentContainer, model, col) {
+    this.parentContainer = parentContainer;
     this.params.particleColor = new THREE.Color(col);
     this.modelURL = model;
     this.buildParticles();
@@ -101,7 +101,7 @@ class particleObject {
     this.uuid = this.particles.uuid;
     this.particles.frustumCulled = false; ////  object visibility fixed
 
-    this.container.add(this.particles);
+    this.parentContainer.add(this.particles);
     this.loadMesh(this.modelURL);
   }
 
@@ -109,7 +109,7 @@ class particleObject {
     this.gltfLoader.load(
       url,
       function (gltf) {
-        // this.container.add(gltf.scene);
+        // this.parentContainer.add(gltf.scene);
         this.surfaceMesh = gltf.scene.children[0]; // Object
         // console.log(gltf);
         this.sampler = new MeshSurfaceSampler(this.surfaceMesh).setWeightAttribute("color").build();
