@@ -3,7 +3,7 @@ import { OrbitControls } from "https://cdn.skypack.dev/three@0.132.0/examples/js
 import { GUI } from "https://cdn.skypack.dev/three@0.137.0/examples/jsm/libs/lil-gui.module.min.js";
 import Stats from "https://cdn.skypack.dev/three@0.132.0/examples/jsm/libs/stats.module.js";
 import { particleObject } from "./particleObject.js";
-import { particleEmitter } from "./particleEmitter.js";
+import { ambientParticles } from "./ambientParticles.js";
 
 ///////////////////////////// BROWSER CHECK
 
@@ -17,14 +17,19 @@ if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(naviga
 }
 
 let camera, scene, renderer, stats, controls;
-let spaceParticles;
-let emitter;
-let spaceVertices = [];
+
+let ambParticles;
+
 let plusZ = 0;
+let stageMoveDistance = 0;
 
 const storyStage = {
   sceneObjects: [],
   stageCointainer: new THREE.Object3D(),
+  moveForwardThreshold: 50,
+  moveBackThreshold: -10,
+  transitionSpeed: 4,
+  flyRange: 500,
 };
 
 let darkMode = false;
@@ -46,13 +51,13 @@ const params = {
     if (darkMode) {
       for (let i = 0; i < storyStage.sceneObjects.length; i++) {
         storyStage.sceneObjects[i].changeRimColor(new THREE.Color(params.darkBackground));
-        renderer.setClearColor(params.darkBackground);
       }
+      renderer.setClearColor(params.darkBackground);
     } else {
       for (let i = 0; i < storyStage.sceneObjects.length; i++) {
         storyStage.sceneObjects[i].changeRimColor(new THREE.Color(0xffffff));
-        renderer.setClearColor(0, 0);
       }
+      renderer.setClearColor(0, 0);
     }
   },
 };
@@ -145,8 +150,8 @@ function init() {
 
   scene.add(storyStage.stageCointainer);
   // buildSpaceParticles();
-  // buildScene();
-  emitter = new particleEmitter(storyStage.stageCointainer);
+  buildScene();
+  ambParticles = new ambientParticles(storyStage.stageCointainer);
 }
 
 //---------------- Animate --------------------------
@@ -158,7 +163,36 @@ function animate(time) {
   plusZ += (0 - plusZ) * 0.05;
   storyStage.stageCointainer.position.z += plusZ;
 
-  emitter.update();
+  if (storyStage.stageCointainer.position.z > storyStage.moveForwardThreshold) {
+    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+      storyStage.sceneObjects[i].particles.position.z += storyStage.transitionSpeed;
+      if (storyStage.sceneObjects[i].particles.position.z >= storyStage.flyRange)
+        storyStage.sceneObjects[i].particles.position.z = -storyStage.flyRange;
+    }
+    ambParticles.speed = storyStage.transitionSpeed;
+    stageMoveDistance += storyStage.transitionSpeed;
+    ambParticles.fly();
+  } else if (storyStage.stageCointainer.position.z <= storyStage.moveBackThreshold) {
+    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+      storyStage.sceneObjects[i].particles.position.z -= storyStage.transitionSpeed;
+      if (storyStage.sceneObjects[i].particles.position.z < -storyStage.flyRange)
+        storyStage.sceneObjects[i].particles.position.z = storyStage.flyRange;
+    }
+    ambParticles.speed = -storyStage.transitionSpeed;
+    stageMoveDistance -= storyStage.transitionSpeed;
+    ambParticles.fly();
+  } else ambParticles.stop();
+
+  if (Math.abs(stageMoveDistance) >= 1.9 * storyStage.flyRange) {
+    stageMoveDistance = 0;
+    storyStage.stageCointainer.position.z = 0;
+    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+      storyStage.sceneObjects[i].particles.position.z = storyStage.sceneObjects[i].position.z;
+    }
+    ambParticles.stop();
+  }
+
+  // console.log(storyStage.stageCointainer.position.z);
 
   requestAnimationFrame(animate);
   render();
@@ -194,16 +228,16 @@ function onDocumentMouseMove(event) {
 
   if (intersects.length > 0) {
     if (intersects[0].object.visible) document.body.style.cursor = "pointer";
-    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
-      if (storyStage.sceneObjects[i].uuid == intersects[0].object.uuid) {
-        storyStage.sceneObjects[i].scale = 0.7;
-      }
-    }
+    // for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+    //   if (storyStage.sceneObjects[i].uuid == intersects[0].object.uuid) {
+    //     storyStage.sceneObjects[i].scale = 0.7;
+    //   }
+    // }
   } else {
     document.body.style.cursor = "default";
-    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
-      storyStage.sceneObjects[i].scale = 0.5;
-    }
+    // for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+    //   storyStage.sceneObjects[i].scale = 0.5;
+    // }
   }
 }
 
@@ -232,7 +266,6 @@ function onDocumentWheel(event) {
   //   sceneObjects[i].position.z += event.deltaY / 200;
   //   sceneObjects[i].setPosition(sceneObjects[i].position);
   // }
-
   plusZ += event.deltaY / 400;
 }
 
@@ -252,35 +285,8 @@ function buildScene() {
     tmp.setRotation(
       new THREE.Vector3(2 * Math.PI * Math.random() - Math.PI, 2 * Math.PI * Math.random() - Math.PI, 2 * Math.PI * Math.random() - Math.PI)
     );
-    tmp.setPosition(new THREE.Vector3(50 * Math.random() - 25, 30 * Math.random() - 15, -50 * Math.random()));
+    tmp.setPosition(new THREE.Vector3(50 * Math.random() - 25, 30 * Math.random() - 15, -100 * Math.random()));
     tmp.zoomResample(camera);
     storyStage.sceneObjects.push(tmp);
   }
-}
-
-function buildSpaceParticles() {
-  let spaceParticlesGeo = new THREE.BufferGeometry();
-  const sprite = new THREE.TextureLoader().load("img/pointSprite.png");
-
-  for (let i = 0; i < 2000; i++) {
-    const x = 600 * Math.random() - 300;
-    const y = 600 * Math.random() - 300;
-    const z = 600 * Math.random() - 300;
-
-    spaceVertices.push(x, y, z);
-  }
-  spaceParticlesGeo.setAttribute("position", new THREE.Float32BufferAttribute(spaceVertices, 3));
-
-  let mat = new THREE.PointsMaterial({
-    size: 4,
-    sizeAttenuation: true,
-    map: sprite,
-    // blending: THREE.AdditiveBlending,
-    depthTest: false,
-    // alphaTest: 0.01,
-    transparent: true,
-  });
-  mat.color.set(colorPallete[0]);
-  spaceParticles = new THREE.Points(spaceParticlesGeo, mat);
-  storyStage.stageCointainer.add(spaceParticles);
 }

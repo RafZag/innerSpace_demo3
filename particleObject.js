@@ -4,7 +4,7 @@ import { MeshSurfaceSampler } from "https://cdn.skypack.dev/three@0.132.0/exampl
 
 class particleObject {
   parentContainer;
-  positon = new THREE.Vector3();
+  position = new THREE.Vector3();
   rotation = new THREE.Vector3();
   scale = 1.0;
   spinRate = 0.2;
@@ -227,7 +227,7 @@ class particleObject {
       this.particles.scale.z += sc * 0.2;
     }
     // this.float(this.floatRate);
-    this.uniformsValues["time"].value = performance.now() * this.params.wobbleSpeed * 0.0000001;
+    this.uniformsValues["time"].value = performance.now() * this.params.wobbleSpeed * 0.0000008;
     this.uniformsValues["wobble"].value = this.params.particlesWobble;
     this.uniformsValues.needsUpdate = true;
   }
