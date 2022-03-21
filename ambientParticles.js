@@ -4,10 +4,10 @@ class ambientParticles {
   parentContainer;
   pos = new THREE.Vector3();
   direction = new THREE.Vector3(0, 0, 1);
-  speed = 4;
+  speed = 6;
   birthRate = 20;
-  particleCount = 2000;
-  frontBirthDistane = -200;
+  particleCount = 5000;
+  frontBirthDistane = -150;
   backBirthDistane = 20;
   flying = false;
 
@@ -29,8 +29,8 @@ class ambientParticles {
     const sprite = new THREE.TextureLoader().load("img/pointSprite.png");
 
     for (let i = 0; i < this.particleCount; i++) {
-      const x = this.pos.x + 200 * Math.random() - 100;
-      const y = this.pos.y + 200 * Math.random() - 100;
+      const x = this.pos.x + 300 * Math.random() - 150;
+      const y = this.pos.y + 300 * Math.random() - 150;
       const z = this.frontBirthDistane * Math.random();
 
       //const angle = Math.PI * 2 * Math.random();
@@ -60,7 +60,8 @@ class ambientParticles {
     }
     if (Math.abs(this.speed) < 0.01 && this.flying) {
       this.flying = false;
-      console.log("stop!");
+
+      // console.log("stop!");
     }
   }
 
@@ -70,14 +71,14 @@ class ambientParticles {
     for (let i = 0; i < positions.length; i++) {
       positions[i * 3 + 2] += this.speed;
       if (positions[i * 3 + 2] > this.backBirthDistane) {
-        positions[i * 3] = this.pos.x + 100 * Math.random() - 50;
-        positions[i * 3 + 1] = this.pos.y + 100 * Math.random() - 50;
+        positions[i * 3] = this.pos.x + 300 * Math.random() - 150;
+        positions[i * 3 + 1] = this.pos.y + 300 * Math.random() - 150;
         positions[i * 3 + 2] = this.frontBirthDistane;
       }
 
       if (positions[i * 3 + 2] < this.frontBirthDistane) {
-        positions[i * 3] = this.pos.x + 100 * Math.random() - 50;
-        positions[i * 3 + 1] = this.pos.y + 100 * Math.random() - 50;
+        positions[i * 3] = this.pos.x + 300 * Math.random() - 150;
+        positions[i * 3 + 1] = this.pos.y + 300 * Math.random() - 150;
         positions[i * 3 + 2] = this.backBirthDistane;
       }
     }

@@ -147,12 +147,12 @@ class particleObject {
   }
 
   resample() {
-    this.geometry.setDrawRange(0, this.params.particleCount);
-    this.geometry.attributes.position.needsUpdate = true;
+    this.particles.geometry.setDrawRange(0, this.params.particleCount);
+    // this.geometry.attributes.position.needsUpdate = true;
   }
 
   zoomResample(cam) {
-    const dist = this.position.distanceTo(cam.position);
+    const dist = this.particles.position.distanceTo(cam.position);
     // if (Math.abs(this.lastZoom - dist) > 1) {
     this.params.particleCount = (this.MAX_PARTICLES * this.params.particleCntMult) / (dist * dist);
     this.resample();
@@ -227,7 +227,7 @@ class particleObject {
       this.particles.scale.z += sc * 0.2;
     }
     // this.float(this.floatRate);
-    this.uniformsValues["time"].value = performance.now() * this.params.wobbleSpeed * 0.0000008;
+    this.uniformsValues["time"].value = performance.now() * this.params.wobbleSpeed * 0.0000004;
     this.uniformsValues["wobble"].value = this.params.particlesWobble;
     this.uniformsValues.needsUpdate = true;
   }

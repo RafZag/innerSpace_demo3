@@ -17,18 +17,19 @@ if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(naviga
 }
 
 let camera, scene, renderer, stats, controls;
-
 let ambParticles;
 
 let plusZ = 0;
-let stageMoveDistance = 0;
+let scrollMoveDistance = 0;
+let transitionAnim = false;
+let flyDistance = 0;
 
 const storyStage = {
   sceneObjects: [],
   stageCointainer: new THREE.Object3D(),
-  moveForwardThreshold: 50,
-  moveBackThreshold: -10,
-  transitionSpeed: 4,
+  moveForwardThreshold: 350,
+  moveBackThreshold: -250,
+  transitionSpeed: 6,
   flyRange: 500,
 };
 
@@ -64,8 +65,7 @@ const params = {
 
 /////////////////////// RAYCASTER
 
-const raycaster = new THREE.Raycaster();
-// raycaster.layers.set(1);
+let raycaster = new THREE.Raycaster();
 
 init();
 animate();
@@ -151,7 +151,7 @@ function init() {
   scene.add(storyStage.stageCointainer);
   // buildSpaceParticles();
   buildScene();
-  ambParticles = new ambientParticles(storyStage.stageCointainer);
+  ambParticles = new ambientParticles(scene);
 }
 
 //---------------- Animate --------------------------
@@ -161,38 +161,49 @@ function animate(time) {
   camera.rotation.y += (camTargetRotY - camera.rotation.y) * 0.03;
 
   plusZ += (0 - plusZ) * 0.05;
-  storyStage.stageCointainer.position.z += plusZ;
 
-  if (storyStage.stageCointainer.position.z > storyStage.moveForwardThreshold) {
+  // scene object scroll move
+  for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+    if (!transitionAnim) {
+      storyStage.sceneObjects[i].particles.position.z += plusZ;
+      // ambParticles.particles.position.z += plusZ;
+      scrollMoveDistance += plusZ;
+    }
+  }
+  // ambient particles fly
+  if (scrollMoveDistance > storyStage.moveForwardThreshold) {
+    transitionAnim = true;
+    ambParticles.speed = storyStage.transitionSpeed;
+  } else if (scrollMoveDistance <= storyStage.moveBackThreshold) {
+    transitionAnim = true;
+    ambParticles.speed = -storyStage.transitionSpeed;
+  }
+
+  if (transitionAnim) {
     for (let i = 0; i < storyStage.sceneObjects.length; i++) {
-      storyStage.sceneObjects[i].particles.position.z += storyStage.transitionSpeed;
+      storyStage.sceneObjects[i].particles.position.z += ambParticles.speed;
       if (storyStage.sceneObjects[i].particles.position.z >= storyStage.flyRange)
         storyStage.sceneObjects[i].particles.position.z = -storyStage.flyRange;
-    }
-    ambParticles.speed = storyStage.transitionSpeed;
-    stageMoveDistance += storyStage.transitionSpeed;
-    ambParticles.fly();
-  } else if (storyStage.stageCointainer.position.z <= storyStage.moveBackThreshold) {
-    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
-      storyStage.sceneObjects[i].particles.position.z -= storyStage.transitionSpeed;
       if (storyStage.sceneObjects[i].particles.position.z < -storyStage.flyRange)
         storyStage.sceneObjects[i].particles.position.z = storyStage.flyRange;
     }
-    ambParticles.speed = -storyStage.transitionSpeed;
-    stageMoveDistance -= storyStage.transitionSpeed;
-    ambParticles.fly();
-  } else ambParticles.stop();
+  }
 
-  if (Math.abs(stageMoveDistance) >= 1.9 * storyStage.flyRange) {
-    stageMoveDistance = 0;
-    storyStage.stageCointainer.position.z = 0;
-    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
-      storyStage.sceneObjects[i].particles.position.z = storyStage.sceneObjects[i].position.z;
-    }
+  if (transitionAnim) {
+    ambParticles.particles.geometry.setDrawRange(0, 5000);
+    ambParticles.fly();
+    flyDistance += ambParticles.speed;
+  } else {
+    ambParticles.particles.geometry.setDrawRange(0, 2000);
     ambParticles.stop();
   }
 
-  // console.log(storyStage.stageCointainer.position.z);
+  if (Math.abs(flyDistance) >= 2 * storyStage.flyRange) {
+    scrollMoveDistance = 0;
+    flyDistance = 0;
+    transitionAnim = false;
+    console.log(storyStage.sceneObjects[0].particles.position.z, storyStage.sceneObjects[0].position.z);
+  }
 
   requestAnimationFrame(animate);
   render();
@@ -223,7 +234,7 @@ function onDocumentMouseMove(event) {
   camTargetRotY = -mouse.x * params.camRot;
 
   mouse.unproject(camera);
-  let raycaster = new THREE.Raycaster(camera.position, mouse.sub(camera.position).normalize());
+  raycaster = new THREE.Raycaster(camera.position, mouse.sub(camera.position).normalize());
   const intersects = raycaster.intersectObjects(storyStage.stageCointainer.children);
 
   if (intersects.length > 0) {
@@ -246,7 +257,7 @@ function onDocumentClick(event) {
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
   mouse.unproject(camera);
-  let raycaster = new THREE.Raycaster(camera.position, mouse.sub(camera.position).normalize());
+  raycaster = new THREE.Raycaster(camera.position, mouse.sub(camera.position).normalize());
   const intersects = raycaster.intersectObjects(storyStage.stageCointainer.children);
 
   if (intersects.length > 0) {
@@ -262,11 +273,15 @@ function onDocumentClick(event) {
 }
 
 function onDocumentWheel(event) {
-  // for (let i = 0; i < sceneObjects.length; i++) {
-  //   sceneObjects[i].position.z += event.deltaY / 200;
-  //   sceneObjects[i].setPosition(sceneObjects[i].position);
+  // for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+  //   storyStage.sceneObjects[i].zoomResample(camera);
   // }
+
   plusZ += event.deltaY / 400;
+  ambParticles.speed = plusZ;
+
+  ambParticles.fly();
+  // console.log(plusZ);
 }
 
 function onWindowResize() {
@@ -287,6 +302,7 @@ function buildScene() {
     );
     tmp.setPosition(new THREE.Vector3(50 * Math.random() - 25, 30 * Math.random() - 15, -100 * Math.random()));
     tmp.zoomResample(camera);
+
     storyStage.sceneObjects.push(tmp);
   }
 }
