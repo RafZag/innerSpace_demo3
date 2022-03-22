@@ -17,7 +17,6 @@ class particleObject {
   surfaceVerts = [];
   partColors = [];
   sizes = [];
-  color;
 
   modelURL;
   gltfLoader = new GLTFLoader();
@@ -25,12 +24,9 @@ class particleObject {
 
   surfaceMesh;
   sampler;
-
   uniformsValues;
 
-  lastZoom = 0;
-
-  params = {
+  particleParams = {
     particleColor: 0x4fcfae,
     particleCount: 20000,
     particleCntMult: 65,
@@ -46,30 +42,30 @@ class particleObject {
 
   constructor(parentContainer, model, col) {
     this.parentContainer = parentContainer;
-    this.params.particleColor = new THREE.Color(col);
+    this.particleParams.particleColor = new THREE.Color(col);
     this.modelURL = model;
     this.buildParticles();
   }
 
   buildParticles() {
-    const pc = new THREE.Color(this.params.particleColor);
+    const pc = new THREE.Color(this.particleParams.particleColor);
 
     for (let j = 0; j < this.MAX_PARTICLES; j++) {
       this.vertices.push(0, 0, 0);
       this.partColors.push(pc.r, pc.g, pc.b);
-      this.sizes.push(this.params.particleSize);
+      this.sizes.push(this.particleParams.particleSize);
     }
 
     this.geometry.setAttribute("color", new THREE.Float32BufferAttribute(this.partColors, 3));
     this.geometry.setAttribute("position", new THREE.Float32BufferAttribute(this.vertices, 3));
     this.geometry.setAttribute("size", new THREE.Float32BufferAttribute(this.sizes, 1).setUsage(THREE.DynamicDrawUsage));
 
-    this.geometry.setDrawRange(0, this.params.particleCount);
+    this.geometry.setDrawRange(0, this.particleParams.particleCount);
 
     this.uniformsValues = {
       rimColor: { value: new THREE.Color("rgb(255, 255, 255)") },
       time: { value: 0.0 },
-      wobble: { value: this.params.particlesWobble },
+      wobble: { value: this.particleParams.particlesWobble },
     };
 
     const shaderMaterial = new THREE.ShaderMaterial({
@@ -95,7 +91,7 @@ class particleObject {
       alphaMap: sprite,
       transparent: true,
     });
-    mat.color.set(this.params.particleColor);
+    mat.color.set(this.particleParams.particleColor);
 
     this.particles = new THREE.Points(this.geometry, shaderMaterial);
     this.uuid = this.particles.uuid;
@@ -147,19 +143,16 @@ class particleObject {
   }
 
   resample() {
-    this.particles.geometry.setDrawRange(0, this.params.particleCount);
+    this.particles.geometry.setDrawRange(0, this.particleParams.particleCount);
     // this.geometry.attributes.position.needsUpdate = true;
   }
 
   zoomResample(cam) {
     const dist = this.particles.position.distanceTo(cam.position);
-    // if (Math.abs(this.lastZoom - dist) > 1) {
-    this.params.particleCount = (this.MAX_PARTICLES * this.params.particleCntMult) / (dist * dist);
+    this.particleParams.particleCount = (this.MAX_PARTICLES * this.particleParams.particleCntMult) / (dist * dist);
     this.resample();
-    this.params.particleSize = (this.MAX_SIZE * dist) / 500;
+    this.particleParams.particleSize = (this.MAX_SIZE * dist) / 500;
     this.changeParticleSize();
-    // this.lastZoom = dist;
-    // }
   }
 
   changeParticleSize() {
@@ -168,7 +161,8 @@ class particleObject {
     const sizes = this.geometry.attributes.size.array;
     for (let i = 0; i < this.geometry.attributes.size.array.length; i++) {
       sizes[i] =
-        this.params.particleSize * this.params.particleSizeMult * viewportSurfaceArea + (Math.random() - 0.5) * 2 * this.params.particleSizeVariation;
+        this.particleParams.particleSize * this.particleParams.particleSizeMult * viewportSurfaceArea +
+        (Math.random() - 0.5) * 2 * this.particleParams.particleSizeVariation;
     }
     this.geometry.attributes.size.needsUpdate = true;
   }
@@ -227,8 +221,8 @@ class particleObject {
       this.particles.scale.z += sc * 0.2;
     }
     // this.float(this.floatRate);
-    this.uniformsValues["time"].value = performance.now() * this.params.wobbleSpeed * 0.0000004;
-    this.uniformsValues["wobble"].value = this.params.particlesWobble;
+    this.uniformsValues["time"].value = performance.now() * this.particleParams.wobbleSpeed * 0.0000004;
+    this.uniformsValues["wobble"].value = this.particleParams.particlesWobble;
     this.uniformsValues.needsUpdate = true;
   }
 }

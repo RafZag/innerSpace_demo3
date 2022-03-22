@@ -11,6 +11,9 @@ class ambientParticles {
   backBirthDistane = 20;
   flying = false;
 
+  horizontalSpread = 300;
+  verticalSpread = 300;
+
   particles; // THREE.Points(); - main object added to scene
   vertices = []; // particles verts
   partColors = [];
@@ -29,8 +32,8 @@ class ambientParticles {
     const sprite = new THREE.TextureLoader().load("img/pointSprite.png");
 
     for (let i = 0; i < this.particleCount; i++) {
-      const x = this.pos.x + 300 * Math.random() - 150;
-      const y = this.pos.y + 300 * Math.random() - 150;
+      const x = this.pos.x + this.horizontalSpread * Math.random() - this.horizontalSpread / 2;
+      const y = this.pos.y + this.verticalSpread * Math.random() - this.verticalSpread / 2;
       const z = this.frontBirthDistane * Math.random();
 
       //const angle = Math.PI * 2 * Math.random();
@@ -58,9 +61,8 @@ class ambientParticles {
       this.speed *= 0.89;
       this.fly();
     }
-    if (Math.abs(this.speed) < 0.01 && this.flying) {
+    if (Math.abs(this.speed) < 0.1 && this.flying) {
       this.flying = false;
-
       // console.log("stop!");
     }
   }
@@ -71,14 +73,13 @@ class ambientParticles {
     for (let i = 0; i < positions.length; i++) {
       positions[i * 3 + 2] += this.speed;
       if (positions[i * 3 + 2] > this.backBirthDistane) {
-        positions[i * 3] = this.pos.x + 300 * Math.random() - 150;
-        positions[i * 3 + 1] = this.pos.y + 300 * Math.random() - 150;
+        positions[i * 3] = this.pos.x + this.horizontalSpread * Math.random() - this.horizontalSpread / 2;
+        positions[i * 3 + 1] = this.pos.y + this.verticalSpread * Math.random() - this.verticalSpread / 2;
         positions[i * 3 + 2] = this.frontBirthDistane;
       }
-
       if (positions[i * 3 + 2] < this.frontBirthDistane) {
-        positions[i * 3] = this.pos.x + 300 * Math.random() - 150;
-        positions[i * 3 + 1] = this.pos.y + 300 * Math.random() - 150;
+        positions[i * 3] = this.pos.x + this.horizontalSpread * Math.random() - this.horizontalSpread / 2;
+        positions[i * 3 + 1] = this.pos.y + this.verticalSpread * Math.random() - this.verticalSpread / 2;
         positions[i * 3 + 2] = this.backBirthDistane;
       }
     }

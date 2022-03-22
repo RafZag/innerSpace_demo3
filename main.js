@@ -39,7 +39,7 @@ let mouse = new THREE.Vector3(0, 0, 0.5);
 let camTargetRotX = 0;
 let camTargetRotY = 0;
 
-const colorPallete = [0x4fcfae, 0x74d5a7, 0x84d6cd, 0x9ce5f0, 0xe1e9f1];
+const colorPallete = [0x74d5a7, 0x92c846, 0x00916c, 0x4fcfae, 0x84d6cd, 0x9ce5f0, 0xe1e9f1];
 
 const params = {
   camRot: 0.4,
@@ -132,14 +132,14 @@ function init() {
     .add(params, "sizeMult", 0, 2, 0.01)
     .onChange(() => {
       for (let i = 0; i < storyStage.sceneObjects.length; i++) {
-        storyStage.sceneObjects[i].params.particleSizeMult = params.sizeMult;
+        storyStage.sceneObjects[i].particleParams.particleSizeMult = params.sizeMult;
         storyStage.sceneObjects[i].changeParticleSize();
       }
     })
     .listen();
   folder1.add(params, "countMult", 10, 100).onChange(() => {
     for (let i = 0; i < storyStage.sceneObjects.length; i++) {
-      storyStage.sceneObjects[i].params.particleCntMult = params.countMult;
+      storyStage.sceneObjects[i].particleParams.particleCntMult = params.countMult;
       storyStage.sceneObjects[i].zoomResample(camera);
     }
   });
@@ -162,14 +162,20 @@ function animate(time) {
 
   plusZ += (0 - plusZ) * 0.05;
 
+  if (!ambParticles.flying) {
+    ambParticles.speed = plusZ;
+    ambParticles.fly();
+  }
+
   // scene object scroll move
   for (let i = 0; i < storyStage.sceneObjects.length; i++) {
     if (!transitionAnim) {
-      storyStage.sceneObjects[i].particles.position.z += plusZ;
+      storyStage.sceneObjects[i].particles.position.z += ambParticles.speed;
       // ambParticles.particles.position.z += plusZ;
       scrollMoveDistance += plusZ;
     }
   }
+
   // ambient particles fly
   if (scrollMoveDistance > storyStage.moveForwardThreshold) {
     transitionAnim = true;
@@ -202,7 +208,7 @@ function animate(time) {
     scrollMoveDistance = 0;
     flyDistance = 0;
     transitionAnim = false;
-    console.log(storyStage.sceneObjects[0].particles.position.z, storyStage.sceneObjects[0].position.z);
+    // console.log(storyStage.sceneObjects[0].particles.position.z, storyStage.sceneObjects[0].position.z);
   }
 
   requestAnimationFrame(animate);
@@ -278,9 +284,6 @@ function onDocumentWheel(event) {
   // }
 
   plusZ += event.deltaY / 400;
-  ambParticles.speed = plusZ;
-
-  ambParticles.fly();
   // console.log(plusZ);
 }
 
@@ -294,7 +297,7 @@ function onWindowResize() {
 
 function buildScene() {
   for (let o = 0; o < 8; o++) {
-    const tmp = new particleObject(storyStage.stageCointainer, "gltf/cell.glb", colorPallete[0]);
+    const tmp = new particleObject(storyStage.stageCointainer, "gltf/cell.glb", colorPallete[3]);
     tmp.changeParticleSize();
     tmp.setScale(0.5);
     tmp.setRotation(
