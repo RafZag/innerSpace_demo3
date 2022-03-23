@@ -245,16 +245,16 @@ function onDocumentMouseMove(event) {
 
   if (intersects.length > 0) {
     if (intersects[0].object.visible) document.body.style.cursor = "pointer";
-    // for (let i = 0; i < storyStage.sceneObjects.length; i++) {
-    //   if (storyStage.sceneObjects[i].uuid == intersects[0].object.uuid) {
-    //     storyStage.sceneObjects[i].scale = 0.7;
-    //   }
-    // }
+    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+      if (storyStage.sceneObjects[i].uuid == intersects[0].object.uuid) {
+        storyStage.sceneObjects[i].scale = 0.7;
+      }
+    }
   } else {
     document.body.style.cursor = "default";
-    // for (let i = 0; i < storyStage.sceneObjects.length; i++) {
-    //   storyStage.sceneObjects[i].scale = 0.5;
-    // }
+    for (let i = 0; i < storyStage.sceneObjects.length; i++) {
+      storyStage.sceneObjects[i].scale = 0.5;
+    }
   }
 }
 
