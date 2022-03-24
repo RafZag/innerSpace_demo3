@@ -1,6 +1,8 @@
 import * as THREE from "https://cdn.skypack.dev/three@0.132.0/build/three.module.js";
 import { GLTFLoader } from "https://cdn.skypack.dev/three@0.132.0/examples/jsm/loaders/GLTFLoader.js";
 import { MeshSurfaceSampler } from "https://cdn.skypack.dev/three@0.132.0/examples/jsm/math/MeshSurfaceSampler.js";
+import particleVertexShader from "./shaders/particleVertexShader.js";
+import particleFragmentShader from "./shaders/particleFragmentShader.js";
 
 class particleObject {
   parentContainer;
@@ -70,8 +72,8 @@ class particleObject {
 
     const shaderMaterial = new THREE.ShaderMaterial({
       uniforms: this.uniformsValues,
-      vertexShader: document.getElementById("vertexshader").textContent,
-      fragmentShader: document.getElementById("fragmentshader").textContent,
+      vertexShader: particleVertexShader,
+      fragmentShader: particleFragmentShader,
       // blending: THREE.AdditiveBlending,
       // depthWrite: false,
       depthTest: true,

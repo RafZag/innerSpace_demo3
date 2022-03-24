@@ -11,61 +11,8 @@
   <body>
     <div id="logo"></div>
     <div id="gui"></div>
-    <script type="x-shader/x-vertex" id="vertexshader">
-
-      uniform float time;
-      uniform float wobble;
-      attribute float size;
-      varying vec3 vColor;
-      varying float dist;
-
-      float hermite(float t)
-      {
-        return t * t * (3.0 - 2.0 * t);
-      }
-
-      float rand(float x){
-          return fract(sin(x * 12.9898) * 43758.5453);
-      }
-
-      float noise(float x, float frequency)
-      {
-        float v = x * frequency;
-        float ix1 = floor(v);
-        float ix2 = floor(v + 1.0);
-        float fx = hermite(fract(v));
-        return mix(rand(ix1), rand(ix2), fx);
-      }
-
-      void main() {
-        vColor = color;
-        vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-        gl_PointSize = size * ( 300.0 / -mvPosition.z );
-
-        mvPosition.x += (noise(time, float(gl_VertexID)) - 0.5 ) * wobble;
-        mvPosition.y += (noise(time + .1, float(gl_VertexID)) - 0.5 ) * wobble;
-        mvPosition.z += (noise(time - .1, float(gl_VertexID)) - 0.5 ) * wobble;
-
-        dist = -mvPosition.z;
-        gl_Position = projectionMatrix * mvPosition;
-      }
-    </script>
-    <script type="x-shader/x-fragment" id="fragmentshader">
-
-      uniform vec3 rimColor;
-      varying vec3 vColor;
-      varying float dist;
-
-      void main() {
-        //vec3 lightColor = vec3(0.6588, 1.0, 0.9137);
-        if (distance(gl_PointCoord, vec2(0.5)) > .4) discard;
-        float c = (sin(gl_PointCoord.x * 3.141592) + sin(gl_PointCoord.y * 3.141592)) / 2.;
-        vec3 s = mix(rimColor, vColor, c);
-        //float alpha = -(0.1 * dist - 0.5)*(0.1 * dist - 0.5) + 1.;
-        float alpha = 1. * 500. / (dist*dist);
-      	gl_FragColor = vec4(s, alpha);
-      }
-    </script>
+    <!-- <script type="x-shader/x-vertex" id="vertexshader"></script> -->
+    <!-- <script type="x-shader/x-fragment" id="fragmentshader"></script> -->
     <script src="particleObject.js" type="module"></script>
     <script src="main.js" type="module"></script>
   </body>
